@@ -268,12 +268,16 @@ hostgroups = [
      :class=>"quickstack::neutron::compute"},
     {:name=>"OpenStack Neutron Networker",
      :class=>"quickstack::neutron::networker"},
-    {:name=>"OpenStack Block Storage",
-     :class=>"quickstack::cinder_storage"},
+#    {:name=>"OpenStack Block Storage",
+#     :class=>"quickstack::cinder_storage"},
+    {:name=>"HA Mysql Node",    
+     :class=>"quickstack::hamysql::node"},
 ]
 
 hostgroups.each do |hg|
+puts hg[:class]
 pclass = Puppetclass.find_by_name hg[:class]
+  puts pclass
   params.each do |k,v|
     p = pclass.class_params.find_by_key(k)
     unless p.nil?
@@ -305,4 +309,17 @@ if ENV["FOREMAN_PROVISIONING"] == "true" then
     h.domain = d
     h.save!
   end
+end
+
+## hack in association to host for testing
+hostgroup_name = "HA Mysql Node"
+host_names = [ "s6ha1c1.example.com", 
+               "s6ha1c2.example.com", 
+               "s6ha1c3.example.com" ]
+hg=Hostgroup.find_by_name hostgroup_name
+host_names.each do |host_name|
+  puts host_name
+  h = Host.find_by_name host_name
+  h.hostgroup = hg
+  h.save!  
 end
