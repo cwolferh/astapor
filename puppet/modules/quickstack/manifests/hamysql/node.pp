@@ -48,24 +48,31 @@ class quickstack::hamysql::node (
 
 
     class {'pacemaker::corosync':
-        cluster_name => "hamysql", 
+        cluster_name => "hamysql",
         cluster_members => "192.168.200.11 192.168.200.12 192.168.200.13 ",
         require => [Yumrepo['clusterlabs'],Package['mysql-server'],Package['MySQL-python'],Package['ccs']],
     }
 
     class {"pacemaker::resource::ip":
       ip_address => "192.168.200.50",
-      group => "my_group",
+      group => "mygroup",
     }
-
+    class {"pacemaker::stonith":
+        disable => true,
+    }
     class {"pacemaker::resource::filesystem":
        device => "192.168.200.200:/mnt/mysql",
        directory => "/var/lib/mysql",
        fstype => "nfs",
-       group => "my_group",
+       group => "mygroup",
     }
-    class {"pacemaker::resource::lsb":
-       name => "mysqld",
-       group => "my_group",
+    class {"pacemaker::resource::mysql":
+      name => "ostk-mysql",
+      group => "mygroup",
+      require => Class['pacemaker::resource::filesystem'],
     }
+    #class {"pacemaker::resource::lsb":
+    #   name => "mysqld",
+    #   group => "my_group",
+    #}
 }
