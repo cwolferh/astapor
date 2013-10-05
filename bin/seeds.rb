@@ -270,6 +270,8 @@ hostgroups = [
      :class=>"quickstack::neutron::networker"},
 #    {:name=>"OpenStack Block Storage",
 #     :class=>"quickstack::cinder_storage"},
+    {:name=>"Mysql Single Node",    
+     :class=>"quickstack::hamysql::singlenodetest"},
     {:name=>"HA Mysql Node",    
      :class=>"quickstack::hamysql::node"},
 ]
@@ -316,6 +318,18 @@ hostgroup_name = "HA Mysql Node"
 host_names = [ "s6ha1c1.example.com", 
                "s6ha1c2.example.com", 
                "s6ha1c3.example.com" ]
+hg=Hostgroup.find_by_name hostgroup_name
+host_names.each do |host_name|
+  puts host_name
+  h = Host.find_by_name host_name
+  h.hostgroup = hg
+  h.save!  
+end
+
+## just openstack::db::mysql on a single node (non-HA)
+hostgroup_name = "Mysql Single Node"
+host_names = [ "s6singlemysql.example.com", 
+             ]
 hg=Hostgroup.find_by_name hostgroup_name
 host_names.each do |host_name|
   puts host_name
