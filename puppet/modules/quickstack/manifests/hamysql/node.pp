@@ -56,11 +56,12 @@ class quickstack::hamysql::node (
        directory => "/var/lib/mysql",
        fstype => "nfs",
        group => "mygroup",
+       require => Class['pacemaker::resource::ip'],
     }
     class {"pacemaker::resource::mysql":
       name => "ostk-mysql",
       group => "mygroup",
-      require => [Class['pacemaker::resource::filesystem'],Class['pacemaker::resource::ip']],
+      require => Class['pacemaker::resource::filesystem'],
     }
 
     # not necessary, will already be in correct order
@@ -69,12 +70,29 @@ class quickstack::hamysql::node (
     #  require => Class['pacemaker::resource::mysql'],
     #}
 
- ##   exec {"wait-for-quorum":  TODO
+   exec {"wait-for-mysql-to-start": 
+       timeout => 3600,
+       tries => 360,
+       try_sleep => 10,
+       command => "/usr/sbin/pcs status  | grep -q 'mysql-ostk-mysql.*Started' > /dev/null 2>&1",
+       require => Class['pacemaker::resource::mysql'],
+   }
 
    #exec {"is-this-the-active-node":
-   #   command => "/usr/bin/test `pcs status | grep mysql-ostk-mysql | perl -p -e 's/^.*Started (.*)/$1/'` = `crm_node -n`",
-   #   require => Class['pacemaker::resource::mysql'],
+   #   command => "/usr/bin/test `/usr/sbin/pcs status | grep mysql-ostk-mysql | perl -p -e 's/^.*Started (.*)/\$1/'` = `/usr/sbin/crm_node -n`",
+   #   require => Exec['wait-for-mysql-to-start'],
    #}
+   #exec {"is-this-the-active-node-echout":
+   #   command => "/bin/echo \"`/usr/sbin/pcs status | grep mysql-ostk-mysql | perl -p -e 's/^.*Started (.*)/\$1/'` = `/usr/sbin/crm_node -n`\" > /tmp/echoout",
+   #   require => Exec['wait-for-mysql-to-start'],
+   #}
+   exec {"if-we-are-active":
+      command => "/bin/touch /tmp/WE-ARE-ACTIVE",
+      require => Exec['wait-for-mysql-to-start'],
+      #require => Exec['is-this-the-active-node'],
+      onlyif => "/bin/bash -s \"a=`/usr/sbin/pcs status | grep mysql-ostk-mysql | perl -p -e 's/^.*Started (\S*).*$/\$1/'`; b=`/usr/sbin/crm_node -n`; echo \$a >/tmp/a; echo \$b > /tmp/b; test \$a = \$b\""
+   }
+
 
 #    class { 'keystone::db::mysql':
 #      user          => $keystone_db_user,
