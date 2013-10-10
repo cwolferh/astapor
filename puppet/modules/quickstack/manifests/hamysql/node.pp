@@ -24,8 +24,11 @@ class quickstack::hamysql::node (
   $neutron_db_user        = 'neutron',
   $neutron_db_dbname      = 'neutron',
 
-  # TODO's: mysql bind only on its vip, not 0.0.0.0
-  # TODO: mysql account security
+  # TODO's: 
+  #  -mysql bind only on its vip, not 0.0.0.0
+  #  -mysql account security
+  #  -parameterize cluster member IP's
+  #  -parameterize vip
 ) inherits quickstack::params {
 
     #Package['mysql-server']     -> Class['quickstack::hamysql::node']
