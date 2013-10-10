@@ -100,9 +100,6 @@ class quickstack::hamysql::node (
        bind_address =>  $mysql_bind_address,
        #require => Exec['install-clu-and-mysql-deps']
        require => [Package['mysql-server'],Package['MySQL-python']]
-       #require => [Package<| 'mysql-server' |>,Package<| 'MySQL-python' |>]
-       #include mysql-server
-       #reailze Package['mysql-server']
     }
 
     class {'pacemaker::corosync':
@@ -227,8 +224,11 @@ class quickstack::hamysql::node (
 
   # would prefer to use below than use "database" and "database_user"
   # but that opens a can of bloody puppet worms
-  # maybe TODO: try using exec's instead of Package's to avoid
+  # tried: try using exec's instead of Package's to avoid
   #      Could not retrieve catalog from remote server: Error 400 on SERVER: Puppet::Parser::AST::Resource failed with error ArgumentError: Cannot alias Package[python-mysqldb] to ["MySQL-python"] at /etc/puppet/environments/production/modules/mysql/manifests/python.pp:24; resource ["Package", "MySQL-python"] already declared at /etc/puppet/environments/production/modules/quickstack/manifests/hamysql/node.pp:89 at /etc/puppet/environments/production/modules/mysql/manifests/python.pp:24 on node s6ha1c1.example.com
+  # but using a combination of exec's and just Package['MySQL-python'] didn't work due to:
+  #      Error: Could not retrieve catalog from remote server: Error 400 on SERVER: Could not find resource 'Class[Mysql::Server]' for relationship on 'Class[Keystone::Db::Mysql]' on node s6ha1c1.example.com[0m
+  # NOTE -- it is complaining about Class[Mysql::Server], not Package['msyql-server'].  ie, no quick fix.
   #class { 'keystone::db::mysql':
   #  user          => $keystone_db_user,
   #  password      => $keystone_db_password,
