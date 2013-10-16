@@ -4,22 +4,31 @@ class quickstack::hamysql::node (
   $glance_db_password          = $quickstack::params::glance_db_password,
   $nova_db_password            = $quickstack::params::nova_db_password,
   $cinder_db_password          = $quickstack::params::cinder_db_password,
-  $mysql_bind_address         = '0.0.0.0',
-  # Keystone
+
+  # these two variables are distinct because you may want to bind on
+  # '0.0.0.0' rather than just the floating ip
+  $mysql_bind_address          = $quickstack::params::mysql_host,
+  $mysql_virtual_ip            = $quickstack::params::mysql_host,
+  $mysql_virt_ip_nic           = $quickstack::params::mysql_virt_ip_nic,
+  $mysql_virt_ip_cidr_mask     = $quickstack::params::mysql_virt_ip_cidr_mask,
+  # e.g. "192.168.200.200:/mnt/mysql"
+  $mysql_shared_storage_device = $quickstack::params::mysql_shared_storage_device,  
+  # e.g. "nfs"
+  $mysql_shared_storage_type   = $quickstack::params::mysql_shared_storage_type,
+  $mysql_resource_group_name   = $quickstack::params::mysql_resource_group_name,
+  $mysql_clu_member_addrs      = $quickstack::params::mysql_clu_member_addrs,
+  
+  # The usual OpenStack db users/names
   $keystone_db_user       = 'keystone',
   $keystone_db_dbname     = 'keystone',
-  # Glance
   $glance_db_user         = 'glance',
   $glance_db_dbname       = 'glance',
-  # Nova
   $nova_db_user           = 'nova',
   $nova_db_dbname         = 'nova',
-  # Cinder
-  $cinder                 = true,
+  #  $cinder                 = true,
   $cinder_db_user         = 'cinder',
   $cinder_db_dbname       = 'cinder',
-  # neutron
-  $neutron                = true,
+  #  $neutron                = true,
   $neutron_db_user        = 'neutron',
   $neutron_db_dbname      = 'neutron',
 
@@ -59,8 +68,9 @@ class quickstack::hamysql::node (
     }
 
     class {"pacemaker::resource::ip":
-      ip_address => "192.168.200.50",
-      group => "mygroup",
+      #ip_address => "192.168.200.50",
+      ip_address => $mysql_virtual_ip,
+      group => $mysql_resource_group_name,
       #cidr_netmask => "24",
       #nic => "eth3",
     }
@@ -68,15 +78,17 @@ class quickstack::hamysql::node (
         disable => true,
     }
     class {"pacemaker::resource::filesystem":
-       device => "192.168.200.200:/mnt/mysql",
+       #device => "192.168.200.200:/mnt/mysql",
+       device => "$mysql_shared_storage_device",
        directory => "/var/lib/mysql",
-       fstype => "nfs",
-       group => "mygroup",
+       #fstype => "nfs",
+       fstype => $mysql_shared_storage_type,
+       group => $mysql_resource_group_name,
        require => Class['pacemaker::resource::ip'],
     }
     class {"pacemaker::resource::mysql":
       name => "ostk-mysql",
-      group => "mygroup",
+      group => $mysql_resource_group_name,
       require => Class['pacemaker::resource::filesystem'],
     }
 
