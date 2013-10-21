@@ -71,8 +71,8 @@ class quickstack::hamysql::node (
       #ip_address => "192.168.200.50",
       ip_address => $mysql_virtual_ip,
       group => $mysql_resource_group_name,
-      #cidr_netmask => "24",
-      #nic => "eth3",
+      cidr_netmask => $mysql_virt_ip_cidr_mask,
+      nic => $mysql_virt_ip_nic,
     }
     class {"pacemaker::stonith":
         disable => true,
