@@ -258,7 +258,7 @@ params = {
   "controller_pub_floating_ip"   => 'PUB_IP',
   "mysql_host"                   => 'PRIV_IP',
   "mysql_virtual_ip"             => 'PRIV_IP',
-  "mysql_bind_address"           => 'PRIV_IP',
+  "mysql_bind_address"           => '0.0.0.0',
   "mysql_virt_ip_nic"            => 'eth2',
   "mysql_virt_ip_cidr_mask"      =>  '24',  
   "mysql_shared_storage_device"  => '192.168.200.200:/mnt/mysql',
@@ -295,7 +295,6 @@ hostgroups = [
 ]
 
 hostgroups.each do |hg|
-puts hg[:class]
 pclass = Puppetclass.find_by_name hg[:class]
   if hg[:class] == "quickstack::hamysql::node" then
     params.each do |k,v|
