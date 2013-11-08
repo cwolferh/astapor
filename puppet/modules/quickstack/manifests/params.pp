@@ -30,10 +30,10 @@ class quickstack::params {
   $cinder_backend_gluster       = true
   $cinder_backend_iscsi         = false
   # Cinder gluster
-  $cinder_gluster_volume        = 'cinder'
+  $cinder_gluster_volume        = 'spruce_one'
   $cinder_gluster_path          = '/srv/gluster/cinder'
-  $cinder_gluster_peers         = [ '192.168.0.4', '192.168.0.5', '192.168.0.6' ]
-  $cinder_gluster_replica_count = '3'
+  $cinder_gluster_peers         = [ '192.168.7.61', '192.168.7.230' ]
+  $cinder_gluster_replica_count = '2'
 
   # Glance
   $glance_db_password           = 'CHANGEME'
@@ -47,7 +47,7 @@ class quickstack::params {
   # Networking - Common
   $private_interface             = 'PRIV_INTERFACE'
   $public_interface              = 'PUB_INTERFACE'
-  $controller_priv_floating_ip   = 'PRIV_IP'
+  $controller_priv_floating_ip   = '192.168.7.139'
   $controller_pub_floating_ip    = 'PUB_IP'
 
   # Nova-network specific
@@ -57,9 +57,9 @@ class quickstack::params {
   # Neutron specific
   $metadata_proxy_shared_secret  = 'CHANGEME'
 
-  $mysql_host                    = 'PRIV_IP'
-  $qpid_host                     = 'PRIV_IP'
-  $bridge_interface              = 'PRIV_IP'
+  $mysql_host                    = '192.168.7.139'
+  $qpid_host                     = '192.168.7.139'
+  $bridge_interface              = '192.168.7.139'
   $enable_ovs_agent              = 'true'
   $tenant_network_type           = 'gre'
   $ovs_vlan_ranges               = undef
@@ -85,7 +85,7 @@ class quickstack::params {
   # provider network settings
   $provider_vlan_auto_create     = 'false'
   $provider_vlan_auto_trunk      = 'false'
-  $mysql_virt_ip_nic             = 'PRIV_IP'
+  $mysql_virt_ip_nic             = '192.168.7.139'
   $mysql_virt_ip_cidr_mask       = 'MYSQL_CIDR_MASK'
   $mysql_shared_storage_device   = 'MYSQL_SHARED_STORAGE_DEVICE'
   # e.g. "nfs"

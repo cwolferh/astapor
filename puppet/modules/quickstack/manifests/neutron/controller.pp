@@ -252,7 +252,7 @@ class quickstack::neutron::controller (
         neutron_admin_password    => $neutron_user_password,
     }
 
-    class { 'quickstack::neutron::network_public': }
+    # class { 'quickstack::neutron::network_public': }
 
     firewall { '001 controller incoming':
         proto    => 'tcp',
