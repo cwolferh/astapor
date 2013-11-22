@@ -25,6 +25,11 @@ class quickstack::cinder_controller(
     require        => Class['openstack::db::mysql', 'qpid::server'],
   }
 
+  cinder_config { 'DEFAULT/enabled_backends': value => 'GLUSTER' }
+  cinder_config { 'GLUSTER/volume_backend_name': value => 'GLUSTER' }
+  cinder_config { 'GLUSTER/volume_driver': value => 'cinder.volume.drivers.glusterfs.GlusterfsDriver' }
+  cinder_config { 'GLUSTER/glusterfs_shares_config': value => '/etc/cinder/shares.conf' }
+
   class {'cinder::api':
     keystone_password => $cinder_user_password,
     keystone_tenant => "services",
