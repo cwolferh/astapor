@@ -346,6 +346,8 @@ hostgroups = [
      :class=>["quickstack::pacemaker::common",
               "quickstack::pacemaker::load_balancer",
               "quickstack::pacemaker::qpid",
+              "quickstack::load_balancer",
+              "qpid::server",
              ]},
 ]
 
