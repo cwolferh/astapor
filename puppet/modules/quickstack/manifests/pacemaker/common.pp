@@ -13,6 +13,11 @@ class quickstack::pacemaker::common (
   $fence_xvm_key_file_password    = $quickstack::params::fence_xvm_key_file_password,
 
 ) inherits quickstack::params {
+
+  include quickstack::ha_params
+  $bint = $quickstack::ha_params::backend_interface
+  notify {"backend_interface is $bint":}
+
   class {'pacemaker::corosync':
     cluster_name    => $pacemaker_cluster_name,
     cluster_members => $pacemaker_cluster_members,
