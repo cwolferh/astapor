@@ -35,6 +35,7 @@ class quickstack::pacemaker::common (
   $fence_ipmilan_password         = "",
   $fence_ipmilan_interval         = "60s",
   $fence_xvm_clu_iface            = "eth2",
+  $fence_xvm_interval             = "150s",
   $fence_xvm_manage_key_file      = "false",
   $fence_xvm_key_file_password    = "",
 
@@ -78,6 +79,7 @@ class quickstack::pacemaker::common (
       key_file_password => $fence_xvm_key_file_password,
       port              => "$::hostname",    # the name of the vm
       pcmk_host         => $clu_ip_address,  # the hostname or IP that pacemaker uses
+      interval          => $fence_xvm_interval,
     }
     Class['pacemaker::corosync'] -> Class['pacemaker::stonith'] ->
     Class['pacemaker::stonith::fence_xvm']
