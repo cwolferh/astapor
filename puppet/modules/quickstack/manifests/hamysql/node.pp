@@ -25,6 +25,8 @@ class quickstack::hamysql::node (
 
 ) inherits quickstack::params {
 
+    #$fs_options_escaped = regsubst($mysql_shared_storage_options, '"', '\"', 'G')
+
     package { 'mysql-server':
       ensure => installed,
     }
@@ -35,6 +37,7 @@ class quickstack::hamysql::node (
     ->
     class {'quickstack::hamysql::mysql::config':
       bind_address =>  $mysql_bind_address,
+      socket => '/var/run/mysqld/mysql.sock',
     }
     ->
     # TODO: use quickstack::pacemaker::common instead
@@ -60,16 +63,34 @@ class quickstack::hamysql::node (
        directory => "/var/lib/mysql",
        fstype => $mysql_shared_storage_type,
        fsoptions => $mysql_shared_storage_options,
+       #fsoptions => $fs_options_escaped,
        group => $mysql_resource_group_name,
     }
     ->
-    exec { "let-mysql-fs-get-mounted":
-      command => "/bin/sleep 15"
+    exec {"wait-for-fs-to-be-active":
+      timeout => 3600,
+      tries => 360,
+      try_sleep => 10,
+      command => "/usr/sbin/pcs status  | grep -q 'fs-varlibmysql.*Started' > /dev/null 2>&1",
+    }
+    ->
+    exec { "sleep-so-really-sure-fs-is-mounted":
+      command => "/bin/sleep 15",
+    }
+    ->
+    # this needs to be an exec rather than puppet's file type because
+    # the link must *only* be attempted to be created on the node that has
+    # shared storage mounted.  /var/lib/mysql must not contain
+    # any files on the other nodes so it can be used as a mount point.
+    exec { "create-socket-symlink-if-we-own-the-mount":
+      command => "/bin/ln -sf /var/run/mysqld/mysql.sock /var/lib/mysql/mysql.sock",
+      onlyif => "/bin/mount | grep -q '/var/lib/mysql'",
     }
     ->
     pacemaker::resource::mysql { 'mysql-clu-mysql' :
       name => "ostk-mysql",
       group => $mysql_resource_group_name,
+      additional_params => "socket=/var/run/mysqld/mysql.sock",
     }
     ->
     pacemaker::constraint::base { 'ip-mysql-constr' :
