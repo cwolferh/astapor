@@ -1,7 +1,6 @@
 class quickstack::pacemaker::nova (
   $auto_assign_floating_ip = 'true',
   $db_name                 = 'nova',
-  $db_password,
   $db_user                 = 'nova',
   $default_floating_pool   = 'nova',
   $force_dhcp_release      = 'false',
@@ -49,7 +48,7 @@ class quickstack::pacemaker::nova (
       bind_address                  => map_params("local_bind_addr"),
       db_host                       => map_params("db_vip"),
       db_name                       => $db_name,
-      db_password                   => $db_password,
+      db_password                   => map_params("nova_db_password"),
       db_user                       => $db_user,
       default_floating_pool         => $default_floating_pool,
       force_dhcp_release            => $force_dhcp_release,

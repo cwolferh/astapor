@@ -10,16 +10,19 @@ class quickstack::pacemaker::params (
   $cinder_private_vip        = '',
   $cinder_admin_vip          = '',
   $cinder_group              = 'cinder',
+  $cinder_db_password      = '',
   $cinder_user_password      = '',
   $glance_public_vip         = '',
   $glance_private_vip        = '',
   $glance_admin_vip          = '',
   $glance_group              = 'glance',
+  $glance_db_password        = '',
   $glance_user_password      = '',
   $heat_public_vip           = '',
   $heat_private_vip          = '',
   $heat_admin_vip            = '',
   $heat_group                = 'heat',
+  $heat_db_password          = '',
   $heat_user_password        = '',
   $heat_cfn_public_vip       = '',
   $heat_cfn_private_vip      = '',
@@ -34,6 +37,7 @@ class quickstack::pacemaker::params (
   $include_glance            = 'true',
   $include_horizon           = 'true',
   $include_keystone          = 'true',
+  $include_mysql             = 'true',
   $include_neutron           = 'true',
   $include_nova              = 'true',
   $include_qpid              = 'true',
@@ -48,16 +52,19 @@ class quickstack::pacemaker::params (
   $keystone_private_vip      = '',
   $keystone_admin_vip        = '',
   $keystone_group            = 'keystone',
+  $keystone_db_password      = '',
   $keystone_user_password    = '',
   $neutron_public_vip        = '',
   $neutron_private_vip       = '',
   $neutron_admin_vip         = '',
   $neutron_group             = 'neutron',
+  $neutron_db_password       = '',
   $neutron_user_password     = '',
   $nova_public_vip           = '',
   $nova_private_vip          = '',
   $nova_admin_vip            = '',
   $nova_group                = 'nova',
+  $nova_db_password          = '',
   $nova_user_password        = '',
   $private_ip                = '',
   $private_iface             = '',
@@ -81,6 +88,7 @@ class quickstack::pacemaker::params (
   }
 
   include quickstack::pacemaker::common
+  include quickstack::pacemaker::mysql
   include quickstack::load_balancer::common
   include quickstack::pacemaker::qpid
   include quickstack::pacemaker::keystone
@@ -90,6 +98,7 @@ class quickstack::pacemaker::params (
   include quickstack::pacemaker::load_balancer
 
   Class['::quickstack::pacemaker::common'] ->
+  Class['::quickstack::pacemaker::mysql'] ->
   Class['::quickstack::load_balancer::common'] ->
   Class['::quickstack::pacemaker::qpid'] ->
   Class['::quickstack::pacemaker::keystone'] ->
