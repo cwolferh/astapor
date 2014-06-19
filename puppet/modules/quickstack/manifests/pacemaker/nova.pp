@@ -92,14 +92,6 @@ class quickstack::pacemaker::nova (
       verbose                       => $verbose,
     }
     ->
-    class {"::quickstack::load_balancer::nova":
-      frontend_pub_host    => map_params("nova_public_vip"),
-      frontend_priv_host   => map_params("nova_private_vip"),
-      frontend_admin_host  => map_params("nova_admin_vip"),
-      backend_server_names => map_params("lb_backend_server_names"),
-      backend_server_addrs => map_params("lb_backend_server_addrs"),
-    }
-    ->
     exec {"pcs-nova-server-set-up":
       command => "/usr/sbin/pcs property set nova=running --force",
     } ->

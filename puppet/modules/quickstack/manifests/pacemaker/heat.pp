@@ -99,19 +99,6 @@ class quickstack::pacemaker::heat(
       heat_engine_enabled     => false,
     }
     ->
-    class {"::quickstack::load_balancer::heat":
-      frontend_heat_pub_host              => map_params("heat_public_vip"),
-      frontend_heat_priv_host             => map_params("heat_private_vip"),
-      frontend_heat_admin_host            => map_params("heat_admin_vip"),
-      frontend_heat_cfn_pub_host          => map_params("heat_cfn_public_vip"),
-      frontend_heat_cfn_priv_host         => map_params("heat_cfn_private_vip"),
-      frontend_heat_cfn_admin_host        => map_params("heat_cfn_admin_vip"),
-      backend_server_names                => map_params("lb_backend_server_names"),
-      backend_server_addrs                => map_params("lb_backend_server_addrs"),
-      heat_cfn_enabled                    => $heat_cfn_enabled,
-      heat_cloudwatch_enabled             => $heat_cloudwatch_enabled,
-    }
-    ->
     exec {"pcs-heat-server-set-up":
       command => "/usr/sbin/pcs property set heat=running --force",
     }

@@ -69,12 +69,6 @@ class quickstack::pacemaker::swift (
       swift_storage_ips    => $swift_storage_ips,
       swift_storage_device => $swift_storage_device,
     }
-    class {"::quickstack::load_balancer::swift":
-      frontend_pub_host    => map_params("swift_public_vip"),
-      backend_server_names => map_params("lb_backend_server_names"),
-      backend_server_addrs => map_params("lb_backend_server_addrs"),
-      require              => Quickstack::Pacemaker::Vips["$swift_group"],
-    }
     ->
     # no way to do this with puppet-swift, so exec for now
     exec {"set-object-expirer-concurrency":

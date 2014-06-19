@@ -94,8 +94,8 @@ class quickstack::pacemaker::params (
   $db_is_ready = ! str2bool_i("$include_mysql") or str2bool_i("$hamysql_is_running")
 
   include quickstack::pacemaker::common
+  include quickstack::pacemaker::load_balancer
   include quickstack::pacemaker::mysql
-  include quickstack::load_balancer::common
   include quickstack::pacemaker::qpid
   include quickstack::pacemaker::keystone
   include quickstack::pacemaker::swift
@@ -103,17 +103,15 @@ class quickstack::pacemaker::params (
   include quickstack::pacemaker::nova
   include quickstack::pacemaker::cinder
   include quickstack::pacemaker::heat
-  include quickstack::pacemaker::load_balancer
 
   Class['::quickstack::pacemaker::common'] ->
+  Class['::quickstack::pacemaker::load_balancer'] ->
   Class['::quickstack::pacemaker::mysql'] ->
-  Class['::quickstack::load_balancer::common'] ->
   Class['::quickstack::pacemaker::qpid'] ->
   Class['::quickstack::pacemaker::keystone'] ->
   Class['::quickstack::pacemaker::swift'] ->
   Class['::quickstack::pacemaker::glance'] ->
   Class['::quickstack::pacemaker::nova'] ->
   Class['::quickstack::pacemaker::cinder'] ->
-  Class['::quickstack::pacemaker::heat'] ->
-  Class['::quickstack::pacemaker::load_balancer']
+  Class['::quickstack::pacemaker::heat']
 }
