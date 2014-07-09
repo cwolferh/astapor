@@ -16,6 +16,14 @@ class quickstack::pacemaker::galera (
 
   if (str2bool_i(map_params('include_mysql'))) {
     $galera_vip = map_params("db_vip")
+    if ($::pcs_setup_galera ==  undef or
+        !str2bool_i("$::pcs_setup_galera")) {
+      $_enabled = true
+      $_ensure = 'running'
+    } else {
+      $_enabled = false
+      $_ensure = undef
+    }
 
     Exec['all-memcached-nodes-are-up'] -> Service['galera']
     Class['::quickstack::pacemaker::rsync::galera'] -> Service['galera']
@@ -26,6 +34,10 @@ class quickstack::pacemaker::galera (
     } else {
       $galera_bootstrap = false
       $galera_test     = "/tmp/ha-all-in-one-util.bash property_exists galera"
+    }
+
+    quickstack::pacemaker::manual_service { "mariadb":
+      stop  => $_enabled,
     }
 
     class {"::quickstack::load_balancer::galera":
@@ -58,6 +70,8 @@ class quickstack::pacemaker::galera (
       galera_bootstrap        => $galera_bootstrap,
       galera_monitor_username => $galera_monitor_username,
       galera_monitor_password => $galera_monitor_password,
+      service_enable          => $_enabled,
+      service_ensure          => $_ensure,
       wsrep_cluster_name      => $wsrep_cluster_name,
       wsrep_cluster_members   => $wsrep_cluster_members,
       wsrep_sst_method        => $wsrep_sst_method,
@@ -101,6 +115,7 @@ class quickstack::pacemaker::galera (
       exec {"shutdown-galera-after-bootstrap":
         command   => "/usr/bin/systemctl stop mariadb.service",
       } ->
+      Quickstack::Pacemaker::Manual_Service['mariadb'] ->
       exec {"pcs-galera-server-stopped-after-bootstrap":
         command => "/tmp/ha-all-in-one-util.bash update_my_node_property galera-post-bootstrap"
       } ->
@@ -113,6 +128,7 @@ class quickstack::pacemaker::galera (
       Quickstack::Pacemaker::Resource::Service['mysqld']
     } else {
       Exec['all-galera-nodes-are-up'] ->
+      Quickstack::Pacemaker::Manual_Service['mariadb'] ->
       Quickstack::Pacemaker::Resource::Service['mysqld']
     }
 

@@ -26,7 +26,6 @@ class quickstack::pacemaker::glance (
   $debug                    = false,
   $use_syslog               = false,
   $log_facility             = 'LOG_USER',
-  $enabled                  = true,
   $filesystem_store_datadir = '/var/lib/glance/images/',
 ) {
 
@@ -36,9 +35,17 @@ class quickstack::pacemaker::glance (
     $glance_private_vip = map_params("glance_private_vip")
     $pcmk_glance_group = map_params("glance_group")
 
+    if ($::pcs_setup_glance ==  undef or
+        !str2bool_i("$::pcs_setup_glance")) {
+      $_enabled = true
+    } else {
+      $_enabled = false
+    }
+
     Exec['i-am-glance-vip-OR-glance-is-up-on-vip'] -> Service['glance-api']
     Exec['i-am-glance-vip-OR-glance-is-up-on-vip'] -> Service['glance-registry']
-    Exec['i-am-glance-vip-OR-glance-is-up-on-vip'] -> Exec['glance-manage db_sync'] -> Exec['pcs-glance-server-set-up']
+    Exec['i-am-glance-vip-OR-glance-is-up-on-vip'] ~> Exec<| title == 'glance-manage db_sync'|> ->
+    Exec['pcs-glance-server-set-up']
 
     if (str2bool_i(map_params('include_mysql'))) {
       Exec['galera-online'] -> Exec['i-am-glance-vip-OR-glance-is-up-on-vip']
@@ -127,7 +134,8 @@ class quickstack::pacemaker::glance (
       debug                    => $debug,
       use_syslog               => $use_syslog,
       log_facility             => $log_facility,
-      enabled                  => $enabled,
+      enabled                  => $_enabled,
+      manage_service           => $_enabled,
       filesystem_store_datadir => $filesystem_store_datadir,
       amqp_host                => map_params("amqp_vip"),
       amqp_port                => map_params("amqp_port"),
@@ -138,6 +146,12 @@ class quickstack::pacemaker::glance (
 
     Class['::quickstack::glance']
     ->
+    quickstack::pacemaker::manual_service { "openstack-glance-registry":
+      stop => $_enabled,
+    } ->
+    quickstack::pacemaker::manual_service { "openstack-glance-api":
+      stop => $_enabled,
+    } ->
     exec {"pcs-glance-server-set-up":
       command => "/usr/sbin/pcs property set glance=running --force",
     } ->

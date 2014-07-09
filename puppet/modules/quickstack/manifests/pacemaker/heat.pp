@@ -10,7 +10,6 @@ class quickstack::pacemaker::heat(
   $use_syslog          = false,
   $log_facility        = 'LOG_USER',
 
-  $enabled             = true,
   $debug               = false,
   $verbose             = false,
 ) {
@@ -27,6 +26,13 @@ class quickstack::pacemaker::heat(
     $heat_group              = map_params("heat_group")
     $heat_cfn_group          = map_params("heat_cfn_group")
     $heat_private_vip        = map_params("heat_private_vip")
+
+    if ($::pcs_setup_heat ==  undef or
+        !str2bool_i("$::pcs_setup_heat")) {
+      $_enabled = true
+    } else {
+      $_enabled = false
+    }
 
     class {"::quickstack::load_balancer::heat":
       frontend_heat_pub_host              => map_params("heat_public_vip"),
@@ -104,12 +110,12 @@ class quickstack::pacemaker::heat(
       cloudwatch_host         => map_params("heat_admin_vip"),
       use_syslog              => $use_syslog,
       log_facility            => $log_facility,
-      enabled                 => $enabled,
+      enabled                 => $_enabled,
+      manage_service          => $_enabled,
       debug                   => $debug,
       verbose                 => $verbose,
       heat_cfn_enabled        => $heat_cfn_enabled,
       heat_cloudwatch_enabled => $heat_cloudwatch_enabled,
-      # don't start heat-engine on all hosts, let pacemaker start it on one
       heat_engine_enabled     => false,
     }
     ->
@@ -128,6 +134,12 @@ class quickstack::pacemaker::heat(
       command   => "/tmp/ha-all-in-one-util.bash all_members_include heat",
     }
     ->
+    quickstack::pacemaker::manual_service { "openstack-heat-api":
+      stop => $_enabled,
+    } ->
+    quickstack::pacemaker::manual_service { "openstack-heat-engine":
+      stop => $_enabled,
+    } ->
     quickstack::pacemaker::resource::service {'openstack-heat-api':
       clone => true,
       options => 'start-delay=10s',
@@ -149,8 +161,11 @@ class quickstack::pacemaker::heat(
         admin_vip   => map_params("heat_cfn_admin_vip"),
       }
       ->
-      Exec["i-am-heat-vip-OR-heat-is-up-on-vip"]
-
+      Exec["i-am-heat-vip-OR-heat-is-up-on-vip"] ->
+      Service[openstack-heat-api-cfn] ->
+      quickstack::pacemaker::manual_service { "openstack-heat-api-cfn":
+        stop => $_enabled,
+      } ->
       Quickstack::Pacemaker::Resource::Service['openstack-heat-engine']
       ->
       quickstack::pacemaker::resource::service {"openstack-heat-api-cfn":
@@ -176,6 +191,9 @@ class quickstack::pacemaker::heat(
     if str2bool_i($heat_cloudwatch_enabled) {
       Quickstack::Pacemaker::Resource::Service['openstack-heat-engine']
       ->
+      quickstack::pacemaker::manual_service { "openstack-heat-api-cloudwatch ":
+        stop => $_enabled,
+      } ->
       quickstack::pacemaker::resource::service {"openstack-heat-api-cloudwatch":
         clone => true,
         options => 'start-delay=10s',

@@ -21,6 +21,12 @@ class quickstack::pacemaker::horizon (
         |x| x+":"+@memcached_port }.join(",") %>'),
         ','
     )
+    if ($::pcs_setup_horizon ==  undef or
+        !str2bool_i("$::pcs_setup_horizon")) {
+      $_enabled = true
+    } else {
+      $_enabled = false
+    }
 
     Exec['i-am-horizon-vip-OR-horizon-is-up-on-vip'] -> Service['httpd']
     if (str2bool_i(map_params('include_mysql'))) {
@@ -74,6 +80,7 @@ class quickstack::pacemaker::horizon (
     ->
     class { '::quickstack::horizon':
       bind_address          => map_params("local_bind_addr"),
+      enabled               => $_enabled,
       fqdn                  => ["$horizon_public_vip",
                                 "$horizon_private_vip",
                                 "$horizon_admin_vip",
@@ -86,10 +93,14 @@ class quickstack::pacemaker::horizon (
       horizon_ca            => $horizon_ca,
       keystone_default_role => $keystone_default_role,
       keystone_host         => map_params("keystone_admin_vip"),
+      manage_service        => $_enabled,
       memcached_servers     => $memcached_servers,
       secret_key            => $secret_key,
     }
     ->
+    quickstack::pacemaker::manual_service { "$::horizon::params::http_service":
+      stop => $_enabled,
+    } ->
     exec {"pcs-horizon-server-set-up":
       command => "/usr/sbin/pcs property set horizon=running --force",
     }

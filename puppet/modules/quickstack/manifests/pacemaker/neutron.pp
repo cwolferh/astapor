@@ -28,7 +28,12 @@ class quickstack::pacemaker::neutron (
     $neutron_group = map_params("neutron_group")
     $neutron_public_vip = map_params("neutron_public_vip")
     $ovs_nic = find_nic("$ovs_tunnel_network","$ovs_tunnel_iface","")
-
+    if ($::pcs_setup_neutron ==  undef or
+        !str2bool_i("$::pcs_setup_neutron")) {
+      $_enabled = true
+    } else {
+      $_enabled = false
+    }
     if (str2bool_i(map_params('include_mysql'))) {
       Exec['galera-online'] -> Exec['i-am-neutron-vip-OR-neutron-is-up-on-vip']
     }
@@ -74,10 +79,11 @@ class quickstack::pacemaker::neutron (
     ->
     class { 'quickstack::neutron::all':
       auth_host                     => map_params("keystone_public_vip"),
-      enable_tunneling              => $enable_tunneling,
-      enabled                       => $enabled,
-      external_network_bridge       => $external_network_bridge,
       database_max_retries          => '-1',
+      enable_tunneling              => $enable_tunneling,
+      enabled                       => $_enabled,
+      external_network_bridge       => $external_network_bridge,
+      manage_service                => $_enabled,
       ml2_type_drivers              => $ml2_type_drivers,
       ml2_tenant_network_types      => $ml2_tenant_network_types,
       ml2_mechanism_drivers         => $ml2_mechanism_drivers,
@@ -122,6 +128,21 @@ class quickstack::pacemaker::neutron (
       command   => "/tmp/ha-all-in-one-util.bash all_members_include neutron",
     }
     ->
+    quickstack::pacemaker::manual_service { "neutron-server":
+      stop => $_enabled,
+    } ->
+    quickstack::pacemaker::manual_service { "neutron-openvswitch-agent":
+      stop => $_enabled,
+    } ->
+    quickstack::pacemaker::manual_service { "neutron-dhcp-agent":
+      stop => $_enabled,
+    } ->
+    quickstack::pacemaker::manual_service { "neutron-l3-agent":
+      stop => $_enabled,
+    } ->
+    quickstack::pacemaker::manual_service { "neutron-metadata-agent":
+      stop => $_enabled,
+    } ->
     quickstack::pacemaker::resource::service {'neutron-server':
       clone => true,
       monitor_params => { 'start-delay' => '10s' },
