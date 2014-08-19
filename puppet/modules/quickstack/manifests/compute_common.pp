@@ -18,10 +18,16 @@ class quickstack::compute_common (
   $ceilometer                   = 'true',
   $ceilometer_metering_secret   = $quickstack::params::ceilometer_metering_secret,
   $ceilometer_user_password     = $quickstack::params::ceilometer_user_password,
+  $ceph_fsid                     = '',
+  $ceph_images_key               = '',
+  $ceph_volumes_key              = '',
+  $ceph_mon_host                 = [ ],
+  $ceph_mon_initial_members      = [ ],
   $cinder_backend_gluster       = $quickstack::params::cinder_backend_gluster,
   $cinder_backend_nfs           = 'false',
   $cinder_backend_rbd           = 'false',
   $glance_host                  = '127.0.0.1',
+  $glance_backend_rbd           = 'false',
   $libvirt_images_rbd_pool      = 'volumes',
   $libvirt_images_rbd_ceph_conf = '/etc/ceph/ceph.conf',
   $libvirt_inject_password      = 'false',
@@ -72,10 +78,22 @@ class quickstack::compute_common (
     }
   }
 
-  if str2bool_i("$cinder_backend_rbd") {
+  if (str2bool_i("$cinder_backend_rbd") or str2bool_i("$glance_backend_rbd")) {
     include ::quickstack::ceph::client_packages
     package {'python-ceph': }
+    if $ceph_fsid {
+      class { '::quickstack::ceph::config':
+        fsid                => $ceph_fsid,
+        mon_initial_members => $ceph_mon_initial_members,
+        mon_host            => $ceph_mon_host,
+        images_key          => $ceph_images_key,
+        volumes_key         => $ceph_volumes_key,
+      } -> Class['quickstack::ceph::client_packages']
+    }
+    Class['quickstack::ceph::client_packages'] -> Class['::nova']
+  }
 
+  if str2bool_i("$cinder_backend_rbd") {
     nova_config {
       'DEFAULT/libvirt_images_rbd_pool':      value => $libvirt_images_rbd_pool;
       'DEFAULT/libvirt_images_rbd_ceph_conf': value => $libvirt_images_rbd_ceph_conf;
