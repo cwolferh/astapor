@@ -192,6 +192,12 @@ class quickstack::pacemaker::glance (
     }
     if ($backend == 'rbd') {
       include ::quickstack::ceph::client_packages
+      include ::quickstack::pacemaker::ceph_config
+
+      Class['quickstack::pacemaker::ceph_config'] ->
+      Package['python-ceph'] ->
+      Class['quickstack::ceph::client_packages'] ->
+      Exec['i-am-glance-vip-OR-glance-is-up-on-vip']
     }
   }
 }
