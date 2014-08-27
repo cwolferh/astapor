@@ -104,6 +104,21 @@ class quickstack::compute_common (
       'DEFAULT/rbd_user':                     value => $rbd_user;
       'DEFAULT/rbd_secret_uuid':              value => $rbd_secret_uuid;
     }
+
+    # the rest of this if block is borrowed from ::nova::compute::rbd
+    # which we can't use due to a duplicate package declaration
+    file { '/etc/nova/secret.xml':
+      content => template('nova/secret.xml-compute.erb')
+    }
+    exec { 'get-or-set virsh secret':
+      command => '/usr/bin/virsh secret-define --file /etc/nova/secret.xml | /usr/bin/awk \'{print $2}\' | sed \'/^$/d\' > /etc/nova/virsh.secret',
+      creates => '/etc/nova/virsh.secret',
+      require => File['/etc/nova/secret.xml']
+    }
+    exec { 'set-secret-value virsh':
+      command => '/usr/bin/virsh secret-set-value --secret $(cat /etc/nova/virsh.secret) --base64 $(ceph auth get-key client.nova)',
+      require => Exec['get-or-set virsh secret']
+    }
   } else {
     nova_config {
       'DEFAULT/libvirt_inject_partition':     value => '-1';
