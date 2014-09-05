@@ -78,11 +78,9 @@ class quickstack::cinder(
     manage_service     => str2bool_i("$manage_service"),
     bind_host          => $bind_host,
   }
-  contain cinder::api
 
   class {'::cinder::scheduler':
     enabled        => str2bool_i("$enabled"),
     manage_service => str2bool_i("$manage_service"),
   }
-  contain cinder::scheduler
 }

@@ -144,6 +144,8 @@ class quickstack::pacemaker::cinder(
     }
 
     Class['::quickstack::cinder'] ->
+    Service[openstack-cinder-api] ->
+    Service[openstack-cinder-scheduler] ->
     quickstack::pacemaker::manual_service { "openstack-cinder-api":
       stop => $_enabled,
     } ->
