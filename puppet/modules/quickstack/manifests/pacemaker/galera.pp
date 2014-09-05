@@ -126,6 +126,15 @@ class quickstack::pacemaker::galera (
         command   => "/tmp/ha-all-in-one-util.bash all_members_include galera-post-bootstrap",
       } ->
       Quickstack::Pacemaker::Resource::Service['mysqld']
+      if (has_interface_with("ipaddress", map_params("cluster_control_ip"))) {
+        $galera_cluster_members_line = inline_template('wsrep_cluster_address="gcomm://<%= @wsrep_cluster_members.join "," %>"')
+        Exec['galera-online'] ->
+        file_line { 'galera-no-bootstrap':
+          path  => '/etc/my.cnf.d/galera.cnf',
+          line  => $galera_cluster_members_line,
+          match => '^wsrep_cluster_address',
+        }
+      }
     } else {
       Exec['all-galera-nodes-are-up'] ->
       Quickstack::Pacemaker::Manual_Service['mariadb'] ->
