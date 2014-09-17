@@ -13,6 +13,7 @@ class quickstack::pacemaker::params (
   $ceph_volumes_key          = '',
   $ceph_mon_host             = [],
   $ceph_mon_initial_members  = [],
+  $ceph_osd_pool_size        = 2,
   $cinder_public_vip         = '',
   $cinder_private_vip        = '',
   $cinder_admin_vip          = '',
