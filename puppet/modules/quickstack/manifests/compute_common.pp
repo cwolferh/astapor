@@ -121,13 +121,13 @@ class quickstack::compute_common (
     ->
     Class['quickstack::ceph::client_packages']
     ->
-    exec { 'get-or-set virsh secret':
-      command => '/usr/bin/virsh secret-define --file /etc/nova/secret.xml | /usr/bin/awk \'{print $2}\' | sed \'/^$/d\' > /etc/nova/virsh.secret',
+    exec { 'define-virsh-rbd-secret':
+      command => '/usr/bin/virsh secret-define --file /etc/nova/secret.xml',
       creates => '/etc/nova/virsh.secret',
     }
     ->
-    exec { 'set-secret-value virsh':
-      command => "/usr/bin/virsh secret-set-value --secret \$(cat /etc/nova/virsh.secret) --base64 \$(ceph auth get-key client.${libvirt_images_rbd_pool})",
+    exec { 'set-virsh-rbd-secret-key':
+      command => "/usr/bin/virsh secret-set-value --secret ${rbd_secret_uuid} --base64 \$(ceph auth get-key client.${libvirt_images_rbd_pool})",
     }
   } else {
     nova_config {
