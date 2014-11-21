@@ -126,6 +126,4 @@ class quickstack::galera::db (
     table      => "$neutron_db_dbname.*",
     require    => Mysql_user["$neutron_db_user@%"]
   }
-
-  Mysql_grant <| |> -> Exec["all-galera-nodes-are-up"]
 }
