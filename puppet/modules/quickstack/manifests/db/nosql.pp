@@ -36,6 +36,8 @@ class quickstack::db::nosql(
   $service_ensure  = 'running',
 ) {
 
+  anchor {'mongodb setup start': }
+  ->
   class { '::mongodb::globals':
     service_enable => $service_enable,
     service_ensure => $service_ensure,
