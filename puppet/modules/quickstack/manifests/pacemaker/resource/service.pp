@@ -14,14 +14,13 @@ define quickstack::pacemaker::resource::service($group='',
                                 monitor_params => $monitor_params,
                                 ensure         => $ensure,
                                 options        => $options}
-
-    anchor { "qprs start $name": } 
+    anchor { "qprs start $name": }
     -> Pcmk_Resource["$name"]
     -> exec {"wait for pcmk_resource $name":
         timeout   => 3600,
         tries     => 360,
         try_sleep => 10,
-        command   => "/usr/sbin/pcs resource show $name",
+        command   => "/usr/sbin/cibadmin --query --xpath \"//lrm_resource[@id='$name']\"",
     }
     -> anchor { "qprs end $name": }
   }
