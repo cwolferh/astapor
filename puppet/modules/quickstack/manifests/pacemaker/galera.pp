@@ -7,7 +7,7 @@ class quickstack::pacemaker::galera (
   $wsrep_sst_method        = 'rsync',
   $wsrep_sst_username      = 'sst_user',
   $wsrep_sst_password      = 'sst_pass',
-  $wsrep_ssl               = false,
+  $wsrep_ssl               = true,
   $wsrep_ssl_key           = '/etc/pki/galera/galera.key',
   $wsrep_ssl_cert          = '/etc/pki/galera/galera.crt',
 ) {
