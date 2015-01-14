@@ -130,6 +130,12 @@ class quickstack::neutron::all (
   }
   File['/etc/neutron/plugin.ini'] -> Exec['neutron-db-manage upgrade']
 
+  # short-term workaround for BZ 1181592
+  exec {'neutron-etc-hosts-workaround':
+    command => '/usr/bin/echo 127.0.0.1 $( hostname ) >>/etc/hosts',
+    unless  => '/usr/bin/grep "127.0.0.1 $( hostname )" /etc/hosts',
+  } -> Service['neutron-server']
+
   class { '::neutron::server':
     auth_host                => $auth_host,
     auth_password            => $neutron_user_password,
