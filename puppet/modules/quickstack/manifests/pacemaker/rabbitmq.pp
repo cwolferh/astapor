@@ -101,10 +101,13 @@ class quickstack::pacemaker::rabbitmq (
     quickstack::pacemaker::manual_service { "rabbitmq-server":
       stop => !$_enabled,
     } ->
-    quickstack::pacemaker::resource::service { 'rabbitmq-server':
-      monitor_params => {"start-delay" => "35s"},
-      clone          => true,
+    quickstack::pacemaker::resource::generic {'rabbitmq-server':
+      clone_opts => ' ', # not undef, so --clone without clone options
     } ->
+    #quickstack::pacemaker::resource::service { 'rabbitmq-server':
+    #  monitor_params => {"start-delay" => "35s"},
+    #  clone          => true,
+    #} ->
     Anchor['pacemaker ordering constraints begin']
 
     $_nodes = map_params('lb_backend_server_addrs')

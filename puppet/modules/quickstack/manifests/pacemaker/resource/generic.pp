@@ -9,7 +9,7 @@ define quickstack::pacemaker::resource::generic(
   include quickstack::pacemaker::params
 
   if has_interface_with("ipaddress", map_params("cluster_control_ip")){
-
+    $_tmp_cib_file = "/tmp/cib-${title}"
     if $resource_name != "" {
       $_resource_name = ":${resource_name}"
     } else {
@@ -19,11 +19,11 @@ define quickstack::pacemaker::resource::generic(
     if $clone_opts != undef {
       $_clone_opts = "--clone ${clone_opts}"
       $_pcs_name = "${title}-clone"
-      $_pcs_update_command = "pcs resource clone ${title} ${clone_opts}"
+      $_pcs_update_command = "/usr/sbin/pcs -f ${_tmp_cib_file} resource clone ${title} ${clone_opts}"
     } else {
       $_clone_opts = ""
       $_pcs_name = "${title}"
-      $_pcs_update_command = ""
+      $_pcs_update_command = "/bin/true"
     }
 
     if $operation_opts != undef {
@@ -38,8 +38,12 @@ define quickstack::pacemaker::resource::generic(
       $_resource_params = ""
     }
 
-    $pcs_command = "/usr/sbin/pcs resource create ${title} \
+
+    $pcs_command = "/usr/sbin/pcs -f ${_tmp_cib_file} resource create ${title} \
     ${resource_type}${_resource_name} ${_resource_params} ${_operation_opts}"
+
+    $the_commands = "/usr/sbin/pcs cluster cib ${_tmp_cib_file}; ${pcs_command}; \
+    ${_pcs_update_command}; /usr/sbin/pcs cluster cib-push ${_tmp_cib_file}" 
 
     anchor { "qprs start $name": }
     ->
@@ -50,7 +54,7 @@ define quickstack::pacemaker::resource::generic(
     ->
     # probably want to move this to puppet-pacemaker eventually
     exec {"create ${title} resource":
-      command   => "${pcs_command}; ${_pcs_update_command}",
+      command   => "${the_commands}",
       tries     => $tries,
       try_sleep => 30,
       unless    => "/usr/sbin/pcs resource show ${_pcs_name}"

@@ -110,9 +110,12 @@ class quickstack::pacemaker::qpid (
       try_sleep => 10,
       command   => "/tmp/ha-all-in-one-util.bash all_members_include qpid",
     } ->
-    quickstack::pacemaker::resource::service { 'qpidd':
-      clone   => true,
+    quickstack::pacemaker::resource::generic {'qpidd':
+      clone_opts     => ' ', # not undef, so --clone without clone options
     } ->
+    #quickstack::pacemaker::resource::service { 'qpidd':
+    #  clone   => true,
+    #} ->
     Anchor['pacemaker ordering constraints begin']
   }
 }
