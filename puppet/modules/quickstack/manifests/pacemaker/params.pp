@@ -98,6 +98,7 @@ class quickstack::pacemaker::params (
   $amqp_group                = 'amqp',
   $amqp_username             = '',
   $amqp_password             = '',
+  $rabbitmq_use_haproxy      = true,
   $swift_public_vip          = '',
   $swift_user_password       = '',
   $swift_group               = 'swift',

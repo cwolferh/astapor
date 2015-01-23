@@ -11,10 +11,17 @@ class quickstack::pacemaker::rabbitmq (
     $amqp_username = map_params("amqp_username")
     $amqp_password = map_params("amqp_password")
     $amqp_vip = map_params("amqp_vip")
+    $rabbitmq_use_haproxy = str2bool_i(map_params("rabbitmq_use_haproxy"))
     $cluster_nodes = regsubst(map_params("lb_backend_server_names"), '\..*', '')
     $server_addrs = map_params("lb_backend_server_addrs")
     $this_addr = map_params("local_bind_addr")
     $this_node = inline_template('<%= @cluster_nodes[@server_addrs.index(@this_addr)] %>')
+
+    if (str2bool_i(map_params('include_mysql'))) {
+      # avoid race condition with galera setup
+      #Anchor['galera-online'] -> Exec['all-rabbitmq-nodes-are-up']
+      #Anchor['galera-online'] -> Service['rabbitmq-server']
+    }
 
     if ($::pcs_setup_rabbitmq ==  undef or
         !str2bool_i("$::pcs_setup_rabbitmq")) {
@@ -60,31 +67,38 @@ class quickstack::pacemaker::rabbitmq (
       },
     }
 
-    class {'::quickstack::load_balancer::amqp':
-      frontend_host        => $amqp_vip,
-      backend_server_names => map_params("lb_backend_server_names"),
-      backend_server_addrs => map_params("lb_backend_server_addrs"),
-      port                 => map_params("amqp_port"),
-      backend_port         => map_params("amqp_port"),
-      timeout              => $haproxy_timeout,
-      extra_listen_options => {'option' => ['tcpka','tcplog']},
-    }
-
-    if (str2bool_i(map_params('include_mysql'))) {
-      # avoid race condition with galera setup
-      Anchor['galera-online'] -> Exec['all-rabbitmq-nodes-are-up']
+    if $rabbitmq_use_haproxy {
+      class {'::quickstack::load_balancer::amqp':
+        frontend_host        => $amqp_vip,
+        backend_server_names => map_params("lb_backend_server_names"),
+        backend_server_addrs => map_params("lb_backend_server_addrs"),
+        port                 => map_params("amqp_port"),
+        backend_port         => map_params("amqp_port"),
+        timeout              => $haproxy_timeout,
+        extra_listen_options => {'option' => ['tcpka','tcplog']},
+      }
     }
 
     Class['::quickstack::firewall::amqp'] ->
     Class['::quickstack::pacemaker::common'] ->
-    # below creates just one vip (not three)
-    quickstack::pacemaker::vips { "$amqp_group":
-      public_vip  => $amqp_vip,
-      private_vip => $amqp_vip,
-      admin_vip   => $amqp_vip,
-    } ->
-
     Class['::rabbitmq'] ->
+    Exec['pcs-rabbitmq-server-set-up']
+
+
+    Class['::quickstack::pacemaker::common'] ->
+    Service<| title == 'rabbitmq-server'|> ->
+    Exec['pcs-rabbitmq-server-set-up']
+
+
+    if $rabbitmq_use_haproxy {
+      # below creates just one vip (not three)
+      quickstack::pacemaker::vips { "$amqp_group":
+        public_vip  => $amqp_vip,
+        private_vip => $amqp_vip,
+        admin_vip   => $amqp_vip,
+      } ->
+      Exec['pcs-rabbitmq-server-set-up']    
+    }
 
     exec {"pcs-rabbitmq-server-set-up":
       command => "/usr/sbin/pcs property set rabbitmq=running --force",
@@ -142,8 +156,7 @@ class quickstack::pacemaker::rabbitmq (
         tries     => 360,
         try_sleep => 10,
         command   => "/tmp/ha-all-in-one-util.bash property_exists rabbitmq",
-        unless    => "/tmp/ha-all-in-one-util.bash property_exists rabbitmq",
-        require   => Quickstack::Pacemaker::Vips ["$amqp_group"],
+        require   => Class['::quickstack::pacemaker::common'],
         before    => Class['::rabbitmq'],
       }
 
@@ -154,10 +167,11 @@ class quickstack::pacemaker::rabbitmq (
         before  => Exec["pcs-rabbitmq-server-set-up"],
       }
 
-      if (str2bool_i(map_params('include_mysql'))) {
-        # avoid race condition with galera setup
-        Anchor['galera-online'] -> Exec['i-am-first-rabbitmq-node-OR-rabbitmq-is-up-on-first-node']
-      }
+      #if (str2bool_i(map_params('include_mysql'))) {
+      #  # avoid race condition with galera setup
+      #  #Anchor['galera-online'] -> Exec['i-am-first-rabbitmq-node-OR-rabbitmq-is-up-on-first-node']
+      #  Anchor['galera-online'] -> Service['rabbitmq-server']
+      #}
     }
   }
 }
