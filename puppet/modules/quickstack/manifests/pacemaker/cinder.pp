@@ -332,7 +332,7 @@ class quickstack::pacemaker::cinder(
 
     if (str2bool_i($backend_rbd)) {
       include ::quickstack::ceph::client_packages
-      include ::quickstack::pacemaker::ceph_config
+      include ::quickstack::pacemaker::ceph
       include ::quickstack::firewall::ceph_mon
 
       Class['quickstack::firewall::ceph_mon'] ->
@@ -350,7 +350,7 @@ class quickstack::pacemaker::cinder(
         package {'python-ceph': } -> Class['quickstack::ceph::client_packages']
       }
 
-      Class['quickstack::pacemaker::ceph_config'] ->
+      Class['quickstack::pacemaker::ceph'] ->
       Class['quickstack::ceph::client_packages'] ->
       Exec['i-am-cinder-vip-OR-cinder-is-up-on-vip']
     }

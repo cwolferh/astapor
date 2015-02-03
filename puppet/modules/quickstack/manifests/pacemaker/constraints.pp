@@ -21,6 +21,17 @@ class quickstack::pacemaker::constraints() {
     }
   }
 
+  if (str2bool_i(map_params('include_ceph'))) {
+    include quickstack::pacemaker::ceph
+    if (str2bool_i($::quickstack::pacemaker::ceph::ceph_manage_rgw)) {
+      quickstack::pacemaker::constraint::haproxy_vips { "ceph-gateway-vip":
+        public_vip  => map_params("ceph_gateway_vip"),
+        private_vip => map_params("ceph_gateway_vip"),
+        admin_vip   => map_params("ceph_gateway_vip"),
+      }
+    }
+  }
+
   if (str2bool_i(map_params('include_cinder'))) {
     $pcmk_cinder_group    = map_params("cinder_group")
     quickstack::pacemaker::constraint::haproxy_vips { "$pcmk_cinder_group":

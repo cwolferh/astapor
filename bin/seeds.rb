@@ -511,6 +511,7 @@ hostgroups = [
                "quickstack::pacemaker::neutron",
                "quickstack::pacemaker::nosql",
                "quickstack::pacemaker::ceilometer",
+               "quickstack::pacemaker::ceph",
                "quickstack::ntp",
               ]},
     {:name=>"Gluster Server",
