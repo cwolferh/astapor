@@ -104,7 +104,7 @@ class quickstack::pacemaker::rabbitmq (
       stop => !$_enabled,
     } ->
     quickstack::pacemaker::resource::generic { 'rabbitmq-server':
-      resource_type   => "rabbitmq-cluster",
+      resource_type   => "rabbitmq-server",
       resource_name   => "",
       # not using the clone parameter since must use "clone" not "--clone"
       resource_params => 'set_policy=\'HA ^(?!amq\.).* {"ha-mode":"all"}\' clone ordered=true',
