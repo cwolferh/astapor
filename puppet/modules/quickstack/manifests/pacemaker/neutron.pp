@@ -86,6 +86,10 @@ class quickstack::pacemaker::neutron (
     } else {
       $_enabled = false
     }
+
+    Exec['i-am-neutron-vip-OR-neutron-is-up-on-vip'] -> Neutron_plugin_ml2<| title == 'ml2_type_vxlan/vni_ranges'|> ->
+    Exec['pcs-neutron-server-set-up']
+
     if (str2bool_i("$l3_ha")) {
       $_dhcp_agents_per_network  = size($_backend_server_addrs)
       $_max_l3_agents_per_router = 0
