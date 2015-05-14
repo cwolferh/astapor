@@ -91,13 +91,12 @@ class quickstack::pacemaker::nosql (
 
     Exec['all-nosql-nodes-are-up'] ->
 
-    quickstack::pacemaker::resource::service {'mongod':
-      options        => 'start timeout=10s',
-      monitor_params => { 'start-delay' => '10s' },
-      clone          => true,
+    quickstack::pacemaker::resource::generic {'mongod':
+      operation_opts => 'start timeout=300s',
+      clone_opts     => '',
     } ->
     anchor {'ha mongo ready':
-      require => Quickstack::Pacemaker::Resource::Service['mongod'],
+      require => Quickstack::Pacemaker::Resource::Generic['mongod'],
     }
     ->
     Anchor['pacemaker ordering constraints begin']
