@@ -6,12 +6,12 @@
 # === Parameters
 #
 # [admin_token]. Auth token for keystone admin. Required.
+# [admin_bind_host] Admin address that keystone binds to. Optional. Defaults to  '0.0.0.0'
 # [amqp_host]. Address where the amqp server resides.  Currently puppet-keystone
 #   only supports rabbit, but if qpid support is added, this param will be used
 #   for that as well. Optional, Defaults to 'localhost'.
 # [amqp_port]. Port where the amqp server accepts connections.  Optional.
 #   Defaults to '5672'.
-# [bind_host] Address that keystone binds to. Optional. Defaults to  '0.0.0.0'
 # [db_host] Host where DB resides. Optional. Defaults to '127.0.0.1'.
 # [db_name] Name of keystone DB. Optional. Defaults to  'keystone'.
 # [db_password] Password for keystone DB. Required.
@@ -26,6 +26,7 @@
 #   Optional. Defaults to  true
 # [manage_service] Whether puppet it to manage if the service is running or not.
 #   Optional. Defaults to true
+# [public_bind_host] Public address that keystone binds to. Optional. Defaults to  '0.0.0.0'
 # [token_driver] Driver to use for managing tokens.
 #   Optional.  Defaults to 'keystone.token.backends.sql.Token'
 # [token_format] Format keystone uses for tokens. Optional. Defaults to PKI.
@@ -43,10 +44,10 @@
 
 class quickstack::keystone::common (
   $admin_token,
+  $admin_bind_host             = '0.0.0.0',
   $amqp_host                   = 'localhost',
   $amqp_port                   = '5672',
   $rabbit_hosts                = undef,
-  $bind_host                   = '0.0.0.0',
   $db_host                     = '127.0.0.1',
   $db_name                     = 'keystone',
   $db_password,
@@ -58,6 +59,7 @@ class quickstack::keystone::common (
   $enabled                     = true,
   $idle_timeout                = '200',
   $log_facility                = 'LOG_USER',
+  $public_bind_host            = '0.0.0.0',
   $service_provider            = undef,
   $token_driver                = 'keystone.token.backends.sql.Token',
   $token_format                = 'PKI',
@@ -83,12 +85,13 @@ class quickstack::keystone::common (
 
   class { '::keystone':
     admin_token      => $admin_token,
-    bind_host        => $bind_host,
+    admin_bind_host  => $admin_bind_host,
     catalog_type     => 'sql',
     debug            => $debug,
     enabled          => $enabled,
     idle_timeout     => $idle_timeout,
     log_facility     => $log_facility,
+    public_bind_host => $public_bind_host,
     rabbit_host      => $amqp_host,
     rabbit_port      => $amqp_port,
     rabbit_hosts     => $rabbit_hosts,
