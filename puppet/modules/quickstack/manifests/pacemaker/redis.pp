@@ -16,23 +16,21 @@ class quickstack::pacemaker::redis(
     slaveof   => $slaveof,
   }
 
+  $_redis_vip = map_params('redis_vip')
+
   quickstack::pacemaker::resource::generic {'redis':
     resource_name => "redis",
     resource_params => "wait_last_known_master=true --master meta notify=true ordered=true interleave=true",
   } ->
-
   quickstack::pacemaker::vips { $redis_group:
-      public_vip   => map_params('redis_vip'),
-      private_vip  => map_params('redis_vip'),
-      admin_vip    => map_params('redis_vip'),
-    } ->
-
-  exec {"pcs-constraint-order":
-      command => "/usr/sbin/pcs constraint order promote redis-master then start vip-redis",
+    public_vip   => $_redis_vip,
+    private_vip  => $_redis_vip,
+    admin_vip    => $_redis_vip,
   } ->
 
-  exec {"pcs-constraint-colocation":
-      command => "/usr/sbin/pcs colocation add vip-redis with master redis-master",
+  quickstack::pacemaker::constraint::typical { 'redis-master-then-vip-redis':
+    first_resource  => 'redis-master',
+    second_resource => "ip-redis-pub-${_redis_vip}",
+    first_action    => 'promote',
   }
-
 }

@@ -38,12 +38,16 @@ class quickstack::pacemaker::ceilometer (
       } else {
         $_slaveof = "${_initial_master} ${coordination_backend_port}"
       }
-
+      
       class { '::quickstack::pacemaker::redis':
         bind_host => map_params("local_bind_addr"),
         port      => $coordination_backend_port,
         slaveof  => $_slaveof,
       }
+      Exec['i-am-ceilometer-vip-OR-ceilometer-is-up-on-vip']
+      -> Class[::redis]
+      -> Quickstack::Pacemaker::Resource::Generic['redis']
+      -> Quickstack::Pacemaker::Resource::Generic['ceilometer-central']
     } else {
       $_coordination_url = undef
     }
