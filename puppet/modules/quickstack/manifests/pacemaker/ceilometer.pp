@@ -44,6 +44,11 @@ class quickstack::pacemaker::ceilometer (
         port      => $coordination_backend_port,
         slaveof  => $_slaveof,
       }
+      Exec['i-am-ceilometer-vip-OR-ceilometer-is-up-on-vip']
+      -> Class[::redis]
+      -> Quickstack::Pacemaker::Resource::Generic['redis']
+      -> Quickstack::Pacemaker::Resource::Service['openstack-ceilometer-central']
+      Class[::redis] -> Exec<| title == 'ceilometer-dbsync' |>
     } else {
       $_coordination_url = undef
     }
