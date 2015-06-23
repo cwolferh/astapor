@@ -42,20 +42,30 @@ class quickstack::pacemaker::glance (
     } else {
       $_enabled = false
     }
+    if ! has_interface_with("ipaddress", map_params("cluster_control_ip")){
+      Anchor['i-am-control-ip-OR-glance-is-up-on-vip'] ->
+      exec {'glance-is-up-on-vip':
+        timeout   => 3600,
+        tries     => 360,
+        try_sleep => 10,
+        command   => "/tmp/ha-all-in-one-util.bash property_exists glance",
+      } ->
+      Class['::quickstack::glance']
+    }
 
-    Exec['i-am-glance-vip-OR-glance-is-up-on-vip'] -> Service['glance-api']-> Exec['pcs-glance-server-set-up']
-    Exec['i-am-glance-vip-OR-glance-is-up-on-vip'] -> Service['glance-registry'] -> Exec['pcs-glance-server-set-up']
-    Exec['i-am-glance-vip-OR-glance-is-up-on-vip'] -> Exec<| title == 'glance-manage db_sync'|> ->
+    Anchor['i-am-control-ip-OR-glance-is-up-on-vip'] -> Service['glance-api']-> Exec['pcs-glance-server-set-up']
+    Anchor['i-am-control-ip-OR-glance-is-up-on-vip'] -> Service['glance-registry'] -> Exec['pcs-glance-server-set-up']
+    Anchor['i-am-control-ip-OR-glance-is-up-on-vip'] -> Exec<| title == 'glance-manage db_sync'|> ->
     Exec['pcs-glance-server-set-up']
 
     if (str2bool_i(map_params('include_mysql'))) {
-      Anchor['galera-online'] -> Exec['i-am-glance-vip-OR-glance-is-up-on-vip']
+      Anchor['galera-online'] -> Anchor['i-am-control-ip-OR-glance-is-up-on-vip']
     }
     if (str2bool_i(map_params('include_keystone'))) {
-      Exec['all-keystone-nodes-are-up'] -> Exec['i-am-glance-vip-OR-glance-is-up-on-vip']
+      Exec['all-keystone-nodes-are-up'] -> Anchor['i-am-control-ip-OR-glance-is-up-on-vip']
     }
     if (str2bool_i(map_params('include_swift'))) {
-      Exec['all-swift-nodes-are-up'] -> Exec['i-am-glance-vip-OR-glance-is-up-on-vip']
+      Exec['all-swift-nodes-are-up'] -> Anchor['i-am-control-ip-OR-glance-is-up-on-vip']
     }
 
     if($backend == 'swift') {
@@ -105,13 +115,8 @@ class quickstack::pacemaker::glance (
       admin_vip   => map_params("glance_admin_vip"),
     }
     ->
-    exec {"i-am-glance-vip-OR-glance-is-up-on-vip":
-      timeout   => 3600,
-      tries     => 360,
-      try_sleep => 10,
-      command   => "/tmp/ha-all-in-one-util.bash i_am_vip $glance_private_vip || /tmp/ha-all-in-one-util.bash property_exists glance",
-      unless   => "/tmp/ha-all-in-one-util.bash i_am_vip $glance_private_vip || /tmp/ha-all-in-one-util.bash property_exists glance",
-    } ->
+    anchor{'i-am-control-ip-OR-glance-is-up-on-vip': }
+    ->
     class { 'quickstack::glance':
       user_password            => map_params("glance_user_password"),
       db_password              => map_params("glance_db_password"),
@@ -211,11 +216,11 @@ class quickstack::pacemaker::glance (
       include ::quickstack::firewall::ceph_mon
 
       Class['quickstack::firewall::ceph_mon'] ->
-      Exec['i-am-glance-vip-OR-glance-is-up-on-vip']
+      Anchor['i-am-control-ip-OR-glance-is-up-on-vip']
 
       Class['quickstack::pacemaker::ceph_config'] ->
       Class['quickstack::ceph::client_packages'] ->
-      Exec['i-am-glance-vip-OR-glance-is-up-on-vip']
+      Anchor['i-am-control-ip-OR-glance-is-up-on-vip']
     }
   }
 }

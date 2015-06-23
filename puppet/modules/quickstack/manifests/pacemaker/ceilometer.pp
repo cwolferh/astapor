@@ -28,6 +28,16 @@ class quickstack::pacemaker::ceilometer (
       $_enabled = false
       $_ensure = undef
     }
+    if ! has_interface_with("ipaddress", map_params("cluster_control_ip")){
+      Anchor['i-am-control-ip-OR-ceilometer-is-up-on-vip'] ->
+      exec {'ceilometer-is-up-on-vip':
+        timeout   => 3600,
+        tries     => 360,
+        try_sleep => 10,
+        command   => "/tmp/ha-all-in-one-util.bash property_exists ceilometer",
+      } ->
+      Class['::quickstack::ceilometer::control']
+    }
 
     if $coordination_backend == 'redis' {
       $_redis_vip = map_params('redis_vip')
@@ -51,7 +61,7 @@ class quickstack::pacemaker::ceilometer (
       Anchor['ceilo-before-vip'] ->
       Anchor['redis-begin']
       Exec['redis-master-is-up'] ->
-      Exec['i-am-ceilometer-vip-OR-ceilometer-is-up-on-vip']
+      Anchor['i-am-control-ip-OR-ceilometer-is-up-on-vip']
     } else {
       $_coordination_url = undef
       $_ceilo_central_clone = undef
@@ -89,7 +99,7 @@ class quickstack::pacemaker::ceilometer (
       Anchor['ha mongo ready'] -> Anchor['ceilo-before-vip']
     }
 
-    Exec['i-am-ceilometer-vip-OR-ceilometer-is-up-on-vip'] -> Exec<| title == 'ceilometer-dbsync' |> -> Exec['pcs-ceilometer-server-set-up']
+    Anchor['i-am-control-ip-OR-ceilometer-is-up-on-vip'] -> Exec<| title == 'ceilometer-dbsync' |> -> Exec['pcs-ceilometer-server-set-up']
 
     class {"::quickstack::load_balancer::ceilometer":
       frontend_pub_host    => $ceilometer_public_vip,
@@ -109,13 +119,7 @@ class quickstack::pacemaker::ceilometer (
     ->
     anchor {'ceilo-before-vip': }
     ->
-    exec {"i-am-ceilometer-vip-OR-ceilometer-is-up-on-vip":
-      timeout   => 3600,
-      tries     => 360,
-      try_sleep => 10,
-      command   => "/tmp/ha-all-in-one-util.bash i_am_vip $ceilometer_private_vip || /tmp/ha-all-in-one-util.bash property_exists ceilometer",
-      unless    => "/tmp/ha-all-in-one-util.bash i_am_vip $ceilometer_private_vip || /tmp/ha-all-in-one-util.bash property_exists ceilometer",
-    }
+    anchor {'i-am-control-ip-OR-ceilometer-is-up-on-vip': }
     ->
     class { '::quickstack::ceilometer::control':
       amqp_provider              => map_params('amqp_provider'),

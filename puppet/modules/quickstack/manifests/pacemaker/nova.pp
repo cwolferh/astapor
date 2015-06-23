@@ -34,18 +34,29 @@ class quickstack::pacemaker::nova (
     } else {
       $_enabled = false
     }
-    Exec['i-am-nova-vip-OR-nova-is-up-on-vip'] -> Exec['nova-db-sync']
+    if ! has_interface_with("ipaddress", map_params("cluster_control_ip")){
+      Anchor['i-am-control-ip-OR-nova-is-up-on-vip'] ->
+      exec {'nova-is-up-on-vip':
+        timeout   => 3600,
+        tries     => 360,
+        try_sleep => 10,
+        command   => "/tmp/ha-all-in-one-util.bash property_exists nova",
+      } ->
+      Class['::quickstack::nova']
+    }
+
+    Anchor['i-am-control-ip-OR-nova-is-up-on-vip'] -> Exec['nova-db-sync']
     if (str2bool_i(map_params('include_mysql'))) {
-      Anchor['galera-online'] -> Exec['i-am-nova-vip-OR-nova-is-up-on-vip']
+      Anchor['galera-online'] -> Anchor['i-am-control-ip-OR-nova-is-up-on-vip']
     }
     if (str2bool_i(map_params('include_keystone'))) {
-      Exec['all-keystone-nodes-are-up'] -> Exec['i-am-nova-vip-OR-nova-is-up-on-vip']
+      Exec['all-keystone-nodes-are-up'] -> Anchor['i-am-control-ip-OR-nova-is-up-on-vip']
     }
     if (str2bool_i(map_params('include_swift'))) {
-      Exec['all-swift-nodes-are-up'] -> Exec['i-am-nova-vip-OR-nova-is-up-on-vip']
+      Exec['all-swift-nodes-are-up'] -> Anchor['i-am-control-ip-OR-nova-is-up-on-vip']
     }
     if (str2bool_i(map_params('include_glance'))) {
-      Exec['all-glance-nodes-are-up'] -> Exec['i-am-nova-vip-OR-nova-is-up-on-vip']
+      Exec['all-glance-nodes-are-up'] -> Anchor['i-am-control-ip-OR-nova-is-up-on-vip']
     }
 
     class {"::quickstack::load_balancer::nova":
@@ -64,13 +75,7 @@ class quickstack::pacemaker::nova (
       admin_vip   => map_params("nova_admin_vip"),
     }
     ->
-    exec {"i-am-nova-vip-OR-nova-is-up-on-vip":
-      timeout   => 3600,
-      tries     => 360,
-      try_sleep => 10,
-      command   => "/tmp/ha-all-in-one-util.bash i_am_vip $nova_private_vip || /tmp/ha-all-in-one-util.bash property_exists nova",
-      unless    => "/tmp/ha-all-in-one-util.bash i_am_vip $nova_private_vip || /tmp/ha-all-in-one-util.bash property_exists nova",
-    }
+    anchor {"i-am-control-ip-OR-nova-is-up-on-vip": }
     ->
     class { '::quickstack::nova':
       admin_password                => map_params("nova_user_password"),

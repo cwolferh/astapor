@@ -88,7 +88,7 @@ class quickstack::pacemaker::neutron (
       # the vip.  we need neutron-server to start up on only one node
       # the first time around so as not to run into a db race
       # condition.
-      Exec['i-am-neutron-vip-OR-neutron-is-up-on-vip'] ->
+      Anchor['i-am-control-ip-OR-neutron-is-up-on-vip'] ->
       Exec['neutron-db-sync'] ->
       exec{"start-and-stop-neutron-server-on-vip":
         command   => "/usr/sbin/service neutron-server start && \
@@ -98,6 +98,16 @@ class quickstack::pacemaker::neutron (
       Exec['pcs-neutron-server-set-up']
     } else {
       $_enabled = false
+    }
+    if ! has_interface_with("ipaddress", map_params("cluster_control_ip")){
+      Anchor['i-am-control-ip-OR-neutron-is-up-on-vip'] ->
+      exec {'neutron-is-up-on-vip':
+        timeout   => 3600,
+        tries     => 360,
+        try_sleep => 10,
+        command   => "/tmp/ha-all-in-one-util.bash property_exists neutron",
+      } ->
+      Anchor['neutron configuration anchor start']
     }
     if (str2bool_i("$l3_ha")) {
       $_dhcp_agents_per_network  = size($_backend_server_addrs)
@@ -113,24 +123,24 @@ class quickstack::pacemaker::neutron (
       $_clone_max                = 1
     }
     if (str2bool_i(map_params('include_mysql'))) {
-      Anchor['galera-online'] -> Exec['i-am-neutron-vip-OR-neutron-is-up-on-vip']
+      Anchor['galera-online'] -> Anchor['i-am-control-ip-OR-neutron-is-up-on-vip']
     }
     if (str2bool_i(map_params('include_keystone'))) {
-      Exec['all-keystone-nodes-are-up'] -> Exec['i-am-neutron-vip-OR-neutron-is-up-on-vip']
+      Exec['all-keystone-nodes-are-up'] -> Anchor['i-am-control-ip-OR-neutron-is-up-on-vip']
     }
     if (str2bool_i(map_params('include_swift'))) {
-      Exec['all-swift-nodes-are-up'] -> Exec['i-am-neutron-vip-OR-neutron-is-up-on-vip']
+      Exec['all-swift-nodes-are-up'] -> Anchor['i-am-control-ip-OR-neutron-is-up-on-vip']
     }
     if (str2bool_i(map_params('include_cinder'))) {
-      Exec['all-cinder-nodes-are-up'] -> Exec['i-am-neutron-vip-OR-neutron-is-up-on-vip']
+      Exec['all-cinder-nodes-are-up'] -> Anchor['i-am-control-ip-OR-neutron-is-up-on-vip']
     }
     if (str2bool_i(map_params('include_glance'))) {
-      Exec['all-glance-nodes-are-up'] -> Exec['i-am-neutron-vip-OR-neutron-is-up-on-vip']
+      Exec['all-glance-nodes-are-up'] -> Anchor['i-am-control-ip-OR-neutron-is-up-on-vip']
     }
     if (str2bool_i(map_params('include_nova'))) {
-      Exec['all-nova-nodes-are-up'] -> Exec['i-am-neutron-vip-OR-neutron-is-up-on-vip']
+      Exec['all-nova-nodes-are-up'] -> Anchor['i-am-control-ip-OR-neutron-is-up-on-vip']
     }
-    Exec['i-am-neutron-vip-OR-neutron-is-up-on-vip'] ->
+    Anchor['i-am-control-ip-OR-neutron-is-up-on-vip'] ->
     Class[neutron::server::notifications] -> Exec['pcs-neutron-server-set-up']
 
     class {"::quickstack::load_balancer::neutron":
@@ -149,13 +159,7 @@ class quickstack::pacemaker::neutron (
       admin_vip   => map_params("neutron_admin_vip"),
     }
     ->
-    exec {"i-am-neutron-vip-OR-neutron-is-up-on-vip":
-      timeout   => 3600,
-      tries     => 360,
-      try_sleep => 10,
-      command   => "/tmp/ha-all-in-one-util.bash i_am_vip $neutron_public_vip || /tmp/ha-all-in-one-util.bash property_exists neutron",
-      unless   => "/tmp/ha-all-in-one-util.bash i_am_vip $neutron_public_vip || /tmp/ha-all-in-one-util.bash property_exists neutron",
-    }
+    anchor {"i-am-control-ip-OR-neutron-is-up-on-vip": }
     ->
     anchor {"neutron configuration anchor start": }
     ->

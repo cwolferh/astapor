@@ -114,18 +114,29 @@ class quickstack::pacemaker::keystone (
     $_enabled = true
 
     # because the dep on stack::keystone is not enough for some reason...
-    Exec['i-am-keystone-vip-OR-keystone-is-up-on-vip'] -> Service['keystone'] -> Exec['pcs-keystone-server-set-up']
-    Exec['i-am-keystone-vip-OR-keystone-is-up-on-vip'] -> Exec<| title == 'keystone-manage db_sync'|> ->
+    Anchor['i-am-control-ip-OR-keystone-is-up-on-vip'] -> Service['keystone'] -> Exec['pcs-keystone-server-set-up']
+    Anchor['i-am-control-ip-OR-keystone-is-up-on-vip'] -> Exec<| title == 'keystone-manage db_sync'|> ->
     Exec['pcs-keystone-server-set-up']
-    Exec['i-am-keystone-vip-OR-keystone-is-up-on-vip'] -> Exec['keystone-manage pki_setup'] -> Exec['pcs-keystone-server-set-up']
-    Exec['i-am-keystone-vip-OR-keystone-is-up-on-vip'] -> Keystone_user<| |> -> Exec['pcs-keystone-server-set-up']
-    Exec['i-am-keystone-vip-OR-keystone-is-up-on-vip'] -> Keystone_user_role<| |> -> Exec['pcs-keystone-server-set-up']
-    Exec['i-am-keystone-vip-OR-keystone-is-up-on-vip'] -> Keystone_endpoint<| |> -> Exec['pcs-keystone-server-set-up']
-    Exec['i-am-keystone-vip-OR-keystone-is-up-on-vip'] -> Keystone_tenant<| |> -> Exec['pcs-keystone-server-set-up']
-    Exec['i-am-keystone-vip-OR-keystone-is-up-on-vip'] -> Keystone_service<| |> -> Exec['pcs-keystone-server-set-up']
+    Anchor['i-am-control-ip-OR-keystone-is-up-on-vip'] -> Exec['keystone-manage pki_setup'] -> Exec['pcs-keystone-server-set-up']
+    Anchor['i-am-control-ip-OR-keystone-is-up-on-vip'] -> Keystone_user<| |> -> Exec['pcs-keystone-server-set-up']
+    Anchor['i-am-control-ip-OR-keystone-is-up-on-vip'] -> Keystone_user_role<| |> -> Exec['pcs-keystone-server-set-up']
+    Anchor['i-am-control-ip-OR-keystone-is-up-on-vip'] -> Keystone_endpoint<| |> -> Exec['pcs-keystone-server-set-up']
+    Anchor['i-am-control-ip-OR-keystone-is-up-on-vip'] -> Keystone_tenant<| |> -> Exec['pcs-keystone-server-set-up']
+    Anchor['i-am-control-ip-OR-keystone-is-up-on-vip'] -> Keystone_service<| |> -> Exec['pcs-keystone-server-set-up']
+
+    if ! has_interface_with("ipaddress", map_params("cluster_control_ip")){
+      Anchor['i-am-control-ip-OR-keystone-is-up-on-vip'] ->
+      exec {'keystone-is-up-on-vip':
+        timeout   => 3600,
+        tries     => 360,
+        try_sleep => 10,
+        command   => "/tmp/ha-all-in-one-util.bash property_exists keystone",
+      } ->
+      Class['::quickstack::keystone::common']
+    }
 
     if (str2bool_i(map_params('include_mysql'))) {
-      Anchor['galera-online'] -> Exec['i-am-keystone-vip-OR-keystone-is-up-on-vip']
+      Anchor['galera-online'] -> Anchor['i-am-control-ip-OR-keystone-is-up-on-vip']
     }
     if (str2bool_i(map_params('include_heat'))) {
       if (is_configured('heat')) {
@@ -157,13 +168,7 @@ class quickstack::pacemaker::keystone (
       admin_vip   => map_params("keystone_admin_vip"),
     } ->
     class {'::quickstack::firewall::keystone':} ->
-    exec {"i-am-keystone-vip-OR-keystone-is-up-on-vip":
-      timeout   => 3600,
-      tries     => 360,
-      try_sleep => 10,
-      command   => "/tmp/ha-all-in-one-util.bash i_am_vip $keystone_private_vip || /tmp/ha-all-in-one-util.bash property_exists keystone",
-      unless   => "/tmp/ha-all-in-one-util.bash i_am_vip $keystone_private_vip || /tmp/ha-all-in-one-util.bash property_exists keystone",
-    } ->
+    anchor {"i-am-control-ip-OR-keystone-is-up-on-vip": } ->
     class {"::quickstack::keystone::common":
       admin_endpoint   => map_params("keystone_admin_vip"),
       admin_token      => "$admin_token",

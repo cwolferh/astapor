@@ -109,22 +109,32 @@ class quickstack::pacemaker::cinder(
     } else {
       $_enabled = false
     }
+    if ! has_interface_with("ipaddress", map_params("cluster_control_ip")){
+      Anchor['i-am-control-ip-OR-cinder-is-up-on-vip'] ->
+      exec {'cinder-is-up-on-vip':
+        timeout   => 3600,
+        tries     => 360,
+        try_sleep => 10,
+        command   => "/tmp/ha-all-in-one-util.bash property_exists cinder",
+      } ->
+      Class['::quickstack::cinder']
+    }
 
-    Exec['i-am-cinder-vip-OR-cinder-is-up-on-vip'] -> Exec<| title =='cinder-manage db_sync'|> -> Exec['pcs-cinder-server-set-up']
+    Anchor['i-am-control-ip-OR-cinder-is-up-on-vip'] -> Exec<| title =='cinder-manage db_sync'|> -> Exec['pcs-cinder-server-set-up']
     if (str2bool_i(map_params('include_mysql'))) {
-      Anchor['galera-online'] -> Exec['i-am-cinder-vip-OR-cinder-is-up-on-vip']
+      Anchor['galera-online'] -> Anchor['i-am-control-ip-OR-cinder-is-up-on-vip']
     }
     if (str2bool_i(map_params('include_keystone'))) {
-      Exec['all-keystone-nodes-are-up'] -> Exec['i-am-cinder-vip-OR-cinder-is-up-on-vip']
+      Exec['all-keystone-nodes-are-up'] -> Anchor['i-am-control-ip-OR-cinder-is-up-on-vip']
     }
     if (str2bool_i(map_params('include_swift'))) {
-      Exec['all-swift-nodes-are-up'] -> Exec['i-am-cinder-vip-OR-cinder-is-up-on-vip']
+      Exec['all-swift-nodes-are-up'] -> Anchor['i-am-control-ip-OR-cinder-is-up-on-vip']
     }
     if (str2bool_i(map_params('include_glance'))) {
-      Exec['all-glance-nodes-are-up'] -> Exec['i-am-cinder-vip-OR-cinder-is-up-on-vip']
+      Exec['all-glance-nodes-are-up'] -> Anchor['i-am-control-ip-OR-cinder-is-up-on-vip']
     }
     if (str2bool_i(map_params('include_nova'))) {
-      Exec['all-nova-nodes-are-up'] -> Exec['i-am-cinder-vip-OR-cinder-is-up-on-vip']
+      Exec['all-nova-nodes-are-up'] -> Anchor['i-am-control-ip-OR-cinder-is-up-on-vip']
     }
 
     if (str2bool_i("$backend_nfs")) {
@@ -161,13 +171,7 @@ class quickstack::pacemaker::cinder(
       admin_vip   => map_params("cinder_admin_vip"),
     }
     ->
-    exec {"i-am-cinder-vip-OR-cinder-is-up-on-vip":
-      timeout => 3600,
-      tries => 360,
-      try_sleep => 10,
-      command => "/tmp/ha-all-in-one-util.bash i_am_vip $cinder_private_vip || /tmp/ha-all-in-one-util.bash property_exists cinder",
-      unless => "/tmp/ha-all-in-one-util.bash i_am_vip $cinder_private_vip || /tmp/ha-all-in-one-util.bash property_exists cinder",
-    }
+    anchor {'i-am-control-ip-OR-cinder-is-up-on-vip': }
     ->
     class {'::quickstack::cinder':
       user_password  => $cinder_user_password,
@@ -368,7 +372,7 @@ class quickstack::pacemaker::cinder(
       include ::quickstack::firewall::ceph_mon
 
       Class['quickstack::firewall::ceph_mon'] ->
-      Exec['i-am-cinder-vip-OR-cinder-is-up-on-vip']
+      Anchor['i-am-control-ip-OR-cinder-is-up-on-vip']
 
       # this block just some puppet hackery to install rbd/ceph
       # packages, avoiding a "package" re-declaration (for python-rbd)
@@ -384,7 +388,7 @@ class quickstack::pacemaker::cinder(
 
       Class['quickstack::pacemaker::ceph_config'] ->
       Class['quickstack::ceph::client_packages'] ->
-      Exec['i-am-cinder-vip-OR-cinder-is-up-on-vip']
+      Anchor['i-am-control-ip-OR-cinder-is-up-on-vip']
     }
 
   }

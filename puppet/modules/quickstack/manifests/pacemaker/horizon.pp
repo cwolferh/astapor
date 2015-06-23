@@ -31,31 +31,41 @@ class quickstack::pacemaker::horizon (
       $_enabled = false
       $_ensure = undef
     }
+    if ! has_interface_with("ipaddress", map_params("cluster_control_ip")){
+      Anchor['i-am-control-ip-OR-horizon-is-up-on-vip'] ->
+      exec {'horizon-is-up-on-vip':
+        timeout   => 3600,
+        tries     => 360,
+        try_sleep => 10,
+        command   => "/tmp/ha-all-in-one-util.bash property_exists horizon",
+      } ->
+      Class['::quickstack::horizon']
+    }
 
-    Exec['i-am-horizon-vip-OR-horizon-is-up-on-vip'] -> Service['httpd']
+    Anchor['i-am-control-ip-OR-horizon-is-up-on-vip'] -> Service['httpd']
     if (str2bool_i(map_params('include_mysql'))) {
-      Anchor['galera-online'] -> Exec['i-am-horizon-vip-OR-horizon-is-up-on-vip']
+      Anchor['galera-online'] -> Anchor['i-am-control-ip-OR-horizon-is-up-on-vip']
     }
     if (str2bool_i(map_params('include_keystone'))) {
-      Exec['all-keystone-nodes-are-up'] -> Exec['i-am-horizon-vip-OR-horizon-is-up-on-vip']
+      Exec['all-keystone-nodes-are-up'] -> Anchor['i-am-control-ip-OR-horizon-is-up-on-vip']
     }
     if (str2bool_i(map_params('include_swift'))) {
-      Exec['all-swift-nodes-are-up'] -> Exec['i-am-horizon-vip-OR-horizon-is-up-on-vip']
+      Exec['all-swift-nodes-are-up'] -> Anchor['i-am-control-ip-OR-horizon-is-up-on-vip']
     }
     if (str2bool_i(map_params('include_glance'))) {
-      Exec['all-glance-nodes-are-up'] -> Exec['i-am-horizon-vip-OR-horizon-is-up-on-vip']
+      Exec['all-glance-nodes-are-up'] -> Anchor['i-am-control-ip-OR-horizon-is-up-on-vip']
     }
     if (str2bool_i(map_params('include_cinder'))) {
-      Exec['all-cinder-nodes-are-up'] -> Exec['i-am-horizon-vip-OR-horizon-is-up-on-vip']
+      Exec['all-cinder-nodes-are-up'] -> Anchor['i-am-control-ip-OR-horizon-is-up-on-vip']
     }
     if (str2bool_i(map_params('include_nova'))) {
-      Exec['all-nova-nodes-are-up'] -> Exec['i-am-horizon-vip-OR-horizon-is-up-on-vip']
+      Exec['all-nova-nodes-are-up'] -> Anchor['i-am-control-ip-OR-horizon-is-up-on-vip']
     }
     if (str2bool_i(map_params('include_neutron'))) {
-      Exec['all-neutron-nodes-are-up'] -> Exec['i-am-horizon-vip-OR-horizon-is-up-on-vip']
+      Exec['all-neutron-nodes-are-up'] -> Anchor['i-am-control-ip-OR-horizon-is-up-on-vip']
     }
     if (str2bool_i(map_params('include_heat'))) {
-      Exec['all-heat-nodes-are-up'] -> Exec['i-am-horizon-vip-OR-horizon-is-up-on-vip']
+      Exec['all-heat-nodes-are-up'] -> Anchor['i-am-control-ip-OR-horizon-is-up-on-vip']
     }
 
     class {"::quickstack::load_balancer::horizon":
@@ -74,13 +84,7 @@ class quickstack::pacemaker::horizon (
       admin_vip   => $horizon_admin_vip,
     }
     ->
-    exec {"i-am-horizon-vip-OR-horizon-is-up-on-vip":
-      timeout   => 3600,
-      tries     => 360,
-      try_sleep => 10,
-      command   => "/tmp/ha-all-in-one-util.bash i_am_vip $horizon_private_vip || /tmp/ha-all-in-one-util.bash property_exists horizon",
-      unless    => "/tmp/ha-all-in-one-util.bash i_am_vip $horizon_private_vip || /tmp/ha-all-in-one-util.bash property_exists horizon",
-    }
+    anchor {'i-am-control-ip-OR-horizon-is-up-on-vip': }
     ->
     class { '::quickstack::horizon':
       bind_address          => map_params("local_bind_addr"),
