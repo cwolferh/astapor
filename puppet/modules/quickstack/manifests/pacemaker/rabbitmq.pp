@@ -46,6 +46,7 @@ class quickstack::pacemaker::rabbitmq (
       environment_variables   => {
         'RABBITMQ_NODENAME'        => "rabbit@$this_node",
         'RABBITMQ_SERVER_ERL_ARGS' => "${erl_args}",
+        'IGNORE_ME'                => "\nulimit -S -n 4096",
       },
       service_manage           => $_enabled,
       # set the parameter tcp_keepalive to false -- but don't be misled!
